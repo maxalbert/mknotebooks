@@ -21,6 +21,57 @@
 
 {% extends "markdown.tpl" %}
 
+{% block header %}
+{{ super() }}
+
+<style>
+.jupyterInputCell {
+    background-color: #0000ff11;
+}
+
+.jupyterOutputCell {
+    /* we don't apply any specific styles here but leave it as a placeholder */
+}
+
+/* Pretty Pandas Dataframes */
+.dataframe {
+    border: 0;
+    font-size: smaller;
+}
+
+.dataframe tr {
+    border: none;
+    background: #ffffff;
+}
+.dataframe tr:nth-child(even) {
+    background: #f5f5f5;
+}
+.dataframe tr:hover {
+    background-color: #e1f5fe;
+}
+
+.dataframe thead th {
+    background: #fff;
+    border-bottom: 1px solid #aaa;
+    font-weight: bold;
+}
+.dataframe th {
+    border: none;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.dataframe td{
+    /* background: #fff; */
+    border: none;
+    text-align: right;
+    min-width:5em;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+</style>
+{% endblock header %}
+
 {% block input_group %}
 {{ super() | wrap_as_jupyter_input_cell }}
 {% endblock input_group %}
