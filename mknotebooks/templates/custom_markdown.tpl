@@ -22,15 +22,9 @@
 {% extends "markdown.tpl" %}
 
 {% block input_group %}
-<div class='jupyterInputCell'>
-{{ super() }}
-</div>
+{{ super() | wrap_as_jupyter_input_cell }}
 {% endblock input_group %}
 
 {% block output_group %}
-<div class='jupyterOutputCell'>
-```
-{{ super().split('\n') | map('remove_leading_indentation') | join('\n') }}
-```
-</div>
+{{ super() | wrap_as_jupyter_output_cell }}
 {% endblock output_group %}

@@ -1,4 +1,4 @@
-import mkdocs, pathlib, os
+import mkdocs, pathlib, os, re, warnings
 from mkdocs.structure.files import Files
 from traitlets.config import Config
 from nbconvert import MarkdownExporter
@@ -7,20 +7,64 @@ import nbformat
 here = os.path.dirname(os.path.abspath(__file__))
 
 
-def remove_leading_indentation(s):
+def get_line_indentation_depth(line: str):
     """
-    Custom Jinja filter which removes leading indentation (= exactly four spaces)
-    from a string and returns the result.
+    Return the number of spaces at the beginning of the line.
+    """
+    initial_spaces = re.match("^( *)", line).group(1)
+    return len(initial_spaces)
 
-    If the input string does not start with four spaces, an error is raised (unless
-    the input is the empty string, in which case it is returned unchanged).
+
+def get_paragraph_indentation_depth(input_str):
     """
-    if s == "":
-        return s
-    elif s.startswith("    "):
-        return s[4:]
+    Return the minimum common indentation depth of all lines in the input string.
+    """
+    lines = input_str.split("\n")
+    non_empty_lines = [l for l in lines if l != ""]
+    return min([get_line_indentation_depth(line) for line in non_empty_lines])
+
+
+def is_indented_markdown_code_block(input_str):
+    """
+    Returns True if each line in the input string is indented with
+    at least four spaces, indicating a markdown code block.
+    """
+    return get_paragraph_indentation_depth(input_str) >= 4
+
+
+def remove_leading_indentation(input_str):
+    """
+    Remove the leading four spaces of each line in the input string and return the result.
+    """
+    lines = input_str.split("\n")
+    dedented_lines = [l[4:] if l != "" else l for l in lines]
+    return "\n".join(dedented_lines)
+
+
+def is_pandas_dataframe_div(input_str):
+    """
+    Return True if the input string contains a HTML table
+    representing a pandas dataframe, otherwise return False.
+    """
+    m = re.match('^<div>.*<table .*class="dataframe">.*</table>.*</div>$', input_str.strip(), re.DOTALL)
+    return m is not None
+
+
+def wrap_as_jupyter_input_cell(input_str):
+    return f"<div class='jupyterInputCell'>\n{input_str}\n</div>"
+
+
+def wrap_as_jupyter_output_cell(input_str):
+    """
+
+    """
+    if is_indented_markdown_code_block(input_str):
+        return f"<div class='jupyterOutputCell'>\n```\n{remove_leading_indentation(input_str)}\n```\n</div>"
+    elif is_pandas_dataframe_div(input_str):
+        return input_str
     else:
-        raise ValueError(f"Expected at least four leading whitespaces, but got string: {s!r}")
+        warnings.warn("[WWW] Warning! Not a regular indented markdown code block!!")
+        return input_str
 
 
 class NotebookFile(mkdocs.structure.files.File):
@@ -72,7 +116,8 @@ class Plugin(mkdocs.plugins.BasePlugin):
 
         template_file = os.path.join(here, "templates", "custom_markdown.tpl")
         exporter = MarkdownExporter(config=c, template_file=template_file)
-        exporter.register_filter("remove_leading_indentation", remove_leading_indentation)
+        exporter.register_filter("wrap_as_jupyter_output_cell", wrap_as_jupyter_output_cell)
+        exporter.register_filter("wrap_as_jupyter_input_cell", wrap_as_jupyter_input_cell)
 
         config["notebook_exporter"] = exporter
         return config
